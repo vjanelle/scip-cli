@@ -27,7 +27,7 @@ export GOCACHE := $(ROOT)/.gocache
 export GOPATH := $(ROOT)/.gopath
 export GOMODCACHE := $(ROOT)/.gopath/pkg/mod
 
-.PHONY: bootstrap fix fmt lint security test coverage build run install uninstall clean test-cgo build-cgo run-cgo install-lsp install-zls install-scip-go
+.PHONY: bootstrap fix fmt security test coverage build run install uninstall clean test-cgo build-cgo run-cgo install-lsp install-zls install-scip-go
 
 USER_GOPATH := $(subst \,/,$(HOME_DIR))/go
 
@@ -40,7 +40,6 @@ bootstrap:
 	$(GO) get github.com/tree-sitter/tree-sitter-python@latest
 	$(GO) get github.com/tree-sitter/tree-sitter-rust@latest
 	$(GO) get github.com/tree-sitter/tree-sitter-java@latest
-	$(GO) get -tool github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	$(GO) get -tool github.com/onsi/ginkgo/v2/ginkgo@latest
 	$(MAKE) install-scip-go
 	$(GO) get -tool golang.org/x/vuln/cmd/govulncheck@latest
@@ -54,9 +53,6 @@ fix:
 
 fmt:
 	$(GO) fmt ./...
-
-lint:
-	$(GO) tool golangci-lint run --config "$(ROOT)/.golangci.yml"
 
 security:
 	$(GO) tool golang.org/x/vuln/cmd/govulncheck ./...

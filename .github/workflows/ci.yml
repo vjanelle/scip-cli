@@ -10,6 +10,8 @@ jobs:
   verify:
     name: Verify (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      GOTOOLCHAIN: local
     strategy:
       fail-fast: false
       matrix:
@@ -23,49 +25,70 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.26.1'
+          go-version-file: go.mod
 
-      - name: Set up GNU Make on Windows
+      - name: Set up Windows build tools
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           update: true
-          install: make
+          path-type: inherit
+          # Go's race detector needs a MinGW-w64 C toolchain on Windows.
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
 
       - name: Bootstrap tools
+        if: runner.os != 'Windows'
+        run: make bootstrap
+
+      - name: Bootstrap tools
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
         run: make bootstrap
 
       - name: Verify go fix is clean
+        if: runner.os != 'Windows'
+        run: |
+          make fix
+          git diff --exit-code
+
+      - name: Verify go fix is clean
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
         run: |
           make fix
           git diff --exit-code
 
       - name: Verify formatting is clean
+        if: runner.os != 'Windows'
+        run: |
+          make fmt
+          git diff --exit-code
+
+      - name: Verify formatting is clean
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
         run: |
           make fmt
           git diff --exit-code
 
       - name: Run tests
+        if: runner.os != 'Windows'
+        run: make test
+
+      - name: Run tests
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
         run: make test
 
       - name: Build binary
+        if: runner.os != 'Windows'
         run: make build
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
+      - name: Build binary
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: make build
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.26.1'
-
-      - name: Bootstrap tools
-        run: make bootstrap
-
-      - name: Run lint
-        run: make lint

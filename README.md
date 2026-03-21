@@ -213,7 +213,6 @@ For query-style commands:
 - `make bootstrap`: install and tidy dependencies, install `ginkgo`, install `scip-go`
 - `make fix`: run `go fix ./...`
 - `make fmt`: run `go fmt ./...`
-- `make lint`: run `golangci-lint`
 - `make security`: run `govulncheck`
 - `make test`: run the default test suite
 - `make build`: build the CLI binary

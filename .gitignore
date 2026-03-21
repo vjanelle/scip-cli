@@ -7,3 +7,4 @@ coverage.out
 *.scip
 .tmp/
 .zig-cache-global/
+/.worktrees/

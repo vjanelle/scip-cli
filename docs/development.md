@@ -37,12 +37,6 @@ make fmt
 make fix
 ```
 
-### Lint
-
-```bash
-make lint
-```
-
 ### Security
 
 ```bash
@@ -113,7 +107,7 @@ The integration suite also asserts that every language returned by `SupportedLan
 
 GitHub automation mirrors the same Makefile entry points:
 
-- `.github/workflows/ci.yml` runs bootstrap, fix, fmt, test, build, and lint
+- `.github/workflows/ci.yml` runs bootstrap, fix, fmt, test, and build
 - `.github/workflows/security.yml` runs the vulnerability scan on pushes, pull requests, and a weekly schedule
 
 ## Coverage
