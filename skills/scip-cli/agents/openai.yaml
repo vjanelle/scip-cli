@@ -1,0 +1,4 @@
+interface:
+  display_name: "SCIP CLI"
+  short_description: "Use and extend the scip-cli for local source indexing"
+  default_prompt: "Use $scip-cli to run or extend the scip-cli command-line interface for local indexing."

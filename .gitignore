@@ -1,0 +1,9 @@
+.gocache/
+.gopath/
+.vs/
+coverage.out
+.coverage.out
+*.exe
+*.scip
+.tmp/
+.zig-cache-global/

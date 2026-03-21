@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.1'
+
+      - name: Set up GNU Make on Windows
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: make
+
+      - name: Bootstrap tools
+        run: make bootstrap
+
+      - name: Verify go fix is clean
+        run: |
+          make fix
+          git diff --exit-code
+
+      - name: Verify formatting is clean
+        run: |
+          make fmt
+          git diff --exit-code
+
+      - name: Run tests
+        run: make test
+
+      - name: Build binary
+        run: make build
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.1'
+
+      - name: Bootstrap tools
+        run: make bootstrap
+
+      - name: Run lint
+        run: make lint
