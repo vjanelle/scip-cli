@@ -1,0 +1,15 @@
+# Keep repository text files on LF so formatting checks stay stable across
+# Unix, Git for Windows, and MSYS2-based CI jobs.
+*.go text eol=lf
+*.md text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+Makefile text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# SCIP snapshots are generated artifacts and should always be treated as binary.
+*.scip binary
