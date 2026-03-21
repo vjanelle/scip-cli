@@ -151,5 +151,44 @@ func cloneMarkdownChildren(parent ast.Node, source ast.Node) {
 }
 
 func markdownCode(value string) string {
-	return fmt.Sprintf("`%s`", strings.ReplaceAll(value, "`", "\\`"))
+	fenceWidth := longestBacktickRun(value) + 1
+	fence := strings.Repeat("`", fenceWidth)
+
+	// Pad content that touches a backtick boundary so CommonMark keeps the
+	// literal text inside the code span instead of treating it as a delimiter.
+	if strings.HasPrefix(value, "`") || strings.HasSuffix(value, "`") {
+		value = " " + value + " "
+	}
+
+	return fmt.Sprintf("%s%s%s", fence, value, fence)
+}
+
+func markdownText(value string) string {
+	replacer := strings.NewReplacer(
+		"\\", "\\\\",
+		"`", "\\`",
+		"*", "\\*",
+		"_", "\\_",
+		"[", "\\[",
+		"]", "\\]",
+		"<", "\\<",
+		">", "\\>",
+	)
+	return replacer.Replace(value)
+}
+
+func longestBacktickRun(value string) int {
+	longest := 0
+	current := 0
+	for _, r := range value {
+		if r == '`' {
+			current++
+			if current > longest {
+				longest = current
+			}
+			continue
+		}
+		current = 0
+	}
+	return longest
 }

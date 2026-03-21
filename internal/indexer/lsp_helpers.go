@@ -16,14 +16,15 @@ func closeLSPClient(client lspClient) {
 	_ = client.Close(closeCtx)
 }
 
-func addOccurrence(seen map[string]struct{}, doc *scip.Document, occurrence scip.Occurrence) {
+func addOccurrence(seen map[string]struct{}, doc *scip.Document, occurrence *scip.Occurrence) {
+	// SCIP protobuf messages embed state with a mutex, so keep occurrences on
+	// the heap and dedupe by their fields instead of copying the struct by value.
 	key := fmt.Sprintf("%s:%d:%v", occurrence.Symbol, occurrence.SymbolRoles, occurrence.Range)
 	if _, ok := seen[key]; ok {
 		return
 	}
 	seen[key] = struct{}{}
-	copyOccurrence := occurrence
-	doc.Occurrences = append(doc.Occurrences, &copyOccurrence)
+	doc.Occurrences = append(doc.Occurrences, occurrence)
 }
 
 func symbolRange(symbol Symbol) []int32 {

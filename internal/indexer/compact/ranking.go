@@ -1,17 +1,20 @@
-package indexer
+package compact
 
 import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/vjanelle/scip-cli/internal/indexer/model"
+	"github.com/vjanelle/scip-cli/internal/indexer/workspace"
 )
 
 type rankedFileSummary struct {
-	summary FileSummary
+	summary model.FileSummary
 	score   int
 }
 
-func rankFileSummaries(files []FileSummary) []rankedFileSummary {
+func rankFileSummaries(files []model.FileSummary) []rankedFileSummary {
 	ranked := make([]rankedFileSummary, 0, len(files))
 	for _, file := range files {
 		score := len(file.Symbols)*20 + scorePath(file.Path) + len(file.SymbolicSExp)/24
@@ -44,9 +47,9 @@ func scorePath(path string) int {
 	return score
 }
 
-func trimFileSummaryForBudget(file FileSummary, req IndexRequest) FileSummary {
+func trimFileSummaryForBudget(file model.FileSummary, req model.IndexRequest) model.FileSummary {
 	trimmed := file
-	symbols := append([]Symbol(nil), file.Symbols...)
+	symbols := append([]model.Symbol(nil), file.Symbols...)
 	if len(symbols) > req.MaxSymbolsPerFile {
 		symbols = symbols[:req.MaxSymbolsPerFile]
 	}
@@ -79,7 +82,7 @@ func trimFileSummaryForBudget(file FileSummary, req IndexRequest) FileSummary {
 	return trimmed
 }
 
-func buildPackageSummaries(result Result, files []FileSummary) []PackageSummary {
+func buildPackageSummaries(result model.Result, files []model.FileSummary) []model.PackageSummary {
 	type bucket struct {
 		lang    string
 		files   int
@@ -87,7 +90,7 @@ func buildPackageSummaries(result Result, files []FileSummary) []PackageSummary 
 	}
 	pkgs := map[string]*bucket{}
 	for _, file := range files {
-		name := PackageNameForPath(file.Path)
+		name := workspace.PackageNameForPath(file.Path)
 		entry := pkgs[name]
 		if entry == nil {
 			entry = &bucket{lang: file.Language}
@@ -111,10 +114,10 @@ func buildPackageSummaries(result Result, files []FileSummary) []PackageSummary 
 		}
 	}
 
-	out := make([]PackageSummary, 0, len(names))
+	out := make([]model.PackageSummary, 0, len(names))
 	for _, name := range names {
 		entry := pkgs[name]
-		out = append(out, PackageSummary{
+		out = append(out, model.PackageSummary{
 			Name:         name,
 			Language:     entry.lang,
 			FileCount:    entry.files,
@@ -123,13 +126,4 @@ func buildPackageSummaries(result Result, files []FileSummary) []PackageSummary 
 		})
 	}
 	return out
-}
-
-// PackageNameForPath maps a relative file path to a compact package or directory label.
-func PackageNameForPath(path string) string {
-	dir := filepath.ToSlash(filepath.Dir(path))
-	if dir == "." {
-		return "root"
-	}
-	return dir
 }

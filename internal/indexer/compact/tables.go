@@ -1,30 +1,33 @@
-package indexer
+package compact
 
 import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/vjanelle/scip-cli/internal/indexer/model"
+	"github.com/vjanelle/scip-cli/internal/indexer/workspace"
 )
 
-func buildCompactStructures(files []FileSummary, packages []PackageSummary, req IndexRequest) (*stringTablesBuilder, []CompactSymbol, []CompactFileSummary, []Relationship) {
+func buildCompactStructures(files []model.FileSummary, packages []model.PackageSummary, req model.IndexRequest) (*stringTablesBuilder, []model.CompactSymbol, []model.CompactFileSummary, []model.Relationship) {
 	table := newStringTablesBuilder()
 	packageIDs := map[string]int{}
 	for _, pkg := range packages {
 		packageIDs[pkg.Name] = table.add("packages", pkg.Name)
 	}
 
-	compactSymbols := make([]CompactSymbol, 0, len(files)*req.MaxSymbolsPerFile)
-	compactFiles := make([]CompactFileSummary, 0, len(files))
-	relationships := make([]Relationship, 0, len(files)*2)
+	compactSymbols := make([]model.CompactSymbol, 0, len(files)*req.MaxSymbolsPerFile)
+	compactFiles := make([]model.CompactFileSummary, 0, len(files))
+	relationships := make([]model.Relationship, 0, len(files)*2)
 	symbolID := 1
 
 	for index, file := range files {
 		pathKey := normalizePathKey(file.Path)
 		pathID := table.add("paths", pathKey)
 		languageID := table.add("languages", file.Language)
-		packageName := PackageNameForPath(pathKey)
+		packageName := workspace.PackageNameForPath(pathKey)
 		fileHandle := fmt.Sprintf("file:%s", pathKey)
-		compacted := CompactFileSummary{
+		compacted := model.CompactFileSummary{
 			HandleID:   fileHandle,
 			PathID:     pathID,
 			LanguageID: languageID,
@@ -40,7 +43,7 @@ func buildCompactStructures(files []FileSummary, packages []PackageSummary, req 
 		}
 
 		for _, symbol := range file.Symbols {
-			entry := CompactSymbol{
+			entry := model.CompactSymbol{
 				ID:          symbolID,
 				NameID:      table.add("symbolNames", symbol.Name),
 				KindID:      table.add("symbolKinds", symbol.Kind),
@@ -53,7 +56,7 @@ func buildCompactStructures(files []FileSummary, packages []PackageSummary, req 
 			}
 			compactSymbols = append(compactSymbols, entry)
 			compacted.SymbolRefs = append(compacted.SymbolRefs, symbolID)
-			relationships = append(relationships, Relationship{
+			relationships = append(relationships, model.Relationship{
 				From: fileHandle,
 				To:   fmt.Sprintf("symbol:%d", symbolID),
 				Kind: "contains",
@@ -62,8 +65,8 @@ func buildCompactStructures(files []FileSummary, packages []PackageSummary, req 
 		}
 
 		relationships = append(relationships,
-			Relationship{From: "package:" + packageName, To: fileHandle, Kind: "contains"},
-			Relationship{From: "root", To: fileHandle, Kind: "indexes"},
+			model.Relationship{From: "package:" + packageName, To: fileHandle, Kind: "contains"},
+			model.Relationship{From: "root", To: fileHandle, Kind: "indexes"},
 		)
 		compactFiles = append(compactFiles, compacted)
 	}
@@ -85,9 +88,9 @@ func normalizePathKey(path string) string {
 	return path
 }
 
-func estimateResultTokens(result Result) int {
+func estimateResultTokens(result model.Result) int {
 	estimate := len(result.CompactFiles)*12 + len(result.CompactSymbols)*8 + len(result.Relationships)*6 + len(result.CompactDeps)*6 + len(result.WarningNotices)*4
-	for _, section := range [][]StringTableEntry{
+	for _, section := range [][]model.StringTableEntry{
 		result.StringTables.Paths,
 		result.StringTables.Languages,
 		result.StringTables.Packages,
@@ -104,13 +107,13 @@ func estimateResultTokens(result Result) int {
 
 type stringTablesBuilder struct {
 	ids    map[string]map[string]int
-	values map[string][]StringTableEntry
+	values map[string][]model.StringTableEntry
 }
 
 func newStringTablesBuilder() *stringTablesBuilder {
 	return &stringTablesBuilder{
 		ids: map[string]map[string]int{},
-		values: map[string][]StringTableEntry{
+		values: map[string][]model.StringTableEntry{
 			"paths":       {},
 			"languages":   {},
 			"packages":    {},
@@ -133,18 +136,18 @@ func (b *stringTablesBuilder) add(section, value string) int {
 	}
 	id := len(b.values[section]) + 1
 	b.ids[section][value] = id
-	b.values[section] = append(b.values[section], StringTableEntry{ID: id, Value: value})
+	b.values[section] = append(b.values[section], model.StringTableEntry{ID: id, Value: value})
 	return id
 }
 
-func (b *stringTablesBuilder) entries() StringTables {
-	return StringTables{
-		Paths:       append([]StringTableEntry(nil), b.values["paths"]...),
-		Languages:   append([]StringTableEntry(nil), b.values["languages"]...),
-		Packages:    append([]StringTableEntry(nil), b.values["packages"]...),
-		SymbolNames: append([]StringTableEntry(nil), b.values["symbolNames"]...),
-		SymbolKinds: append([]StringTableEntry(nil), b.values["symbolKinds"]...),
-		Misc:        append([]StringTableEntry(nil), b.values["misc"]...),
+func (b *stringTablesBuilder) entries() model.StringTables {
+	return model.StringTables{
+		Paths:       append([]model.StringTableEntry(nil), b.values["paths"]...),
+		Languages:   append([]model.StringTableEntry(nil), b.values["languages"]...),
+		Packages:    append([]model.StringTableEntry(nil), b.values["packages"]...),
+		SymbolNames: append([]model.StringTableEntry(nil), b.values["symbolNames"]...),
+		SymbolKinds: append([]model.StringTableEntry(nil), b.values["symbolKinds"]...),
+		Misc:        append([]model.StringTableEntry(nil), b.values["misc"]...),
 	}
 }
 

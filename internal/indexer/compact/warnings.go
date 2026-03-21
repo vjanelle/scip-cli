@@ -1,14 +1,16 @@
-package indexer
+package compact
 
 import (
 	"slices"
 	"strings"
+
+	"github.com/vjanelle/scip-cli/internal/indexer/model"
 )
 
-func buildCompactDependencies(deps []ModuleDependency, table *stringTablesBuilder) []CompactDependency {
-	compact := make([]CompactDependency, 0, len(deps))
+func buildCompactDependencies(deps []model.ModuleDependency, table *stringTablesBuilder) []model.CompactDependency {
+	compact := make([]model.CompactDependency, 0, len(deps))
 	for _, dep := range deps {
-		compact = append(compact, CompactDependency{
+		compact = append(compact, model.CompactDependency{
 			PathID:    table.add("paths", normalizePathKey(dep.Path)),
 			VersionID: table.add("misc", dep.Version),
 			ReplaceID: table.add("misc", dep.Replace),
@@ -20,7 +22,7 @@ func buildCompactDependencies(deps []ModuleDependency, table *stringTablesBuilde
 	return compact
 }
 
-func compactWarnings(warnings []string, table *stringTablesBuilder) ([]string, []WarningNotice) {
+func compactWarnings(warnings []string, table *stringTablesBuilder) ([]string, []model.WarningNotice) {
 	if len(warnings) == 0 {
 		return nil, nil
 	}
@@ -53,11 +55,11 @@ func compactWarnings(warnings []string, table *stringTablesBuilder) ([]string, [
 		return buckets[right].score - buckets[left].score
 	})
 
-	notices := make([]WarningNotice, 0, min(12, len(codes)))
+	notices := make([]model.WarningNotice, 0, min(12, len(codes)))
 	inline := make([]string, 0, 2)
 	for _, code := range codes {
 		bucket := buckets[code]
-		notices = append(notices, WarningNotice{
+		notices = append(notices, model.WarningNotice{
 			Code:      code,
 			MessageID: table.add("misc", bucket.message),
 			Count:     bucket.count,

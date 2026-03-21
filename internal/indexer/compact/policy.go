@@ -1,8 +1,13 @@
-package indexer
+package compact
 
-import "strings"
+import (
+	"strings"
 
-func effectiveResponseMode(req IndexRequest, result Result) (string, bool) {
+	"github.com/vjanelle/scip-cli/internal/indexer/model"
+	"github.com/vjanelle/scip-cli/internal/indexer/workspace"
+)
+
+func effectiveResponseMode(req model.IndexRequest, result model.Result) (string, bool) {
 	mode := req.ResponseMode
 	if mode == "" {
 		mode = "compact"
@@ -12,11 +17,11 @@ func effectiveResponseMode(req IndexRequest, result Result) (string, bool) {
 	}
 	fileThreshold := req.AutoHandleFileThreshold
 	if fileThreshold <= 0 {
-		fileThreshold = DefaultAutoHandleFileThreshold
+		fileThreshold = workspace.DefaultAutoHandleFileThreshold
 	}
 	symbolThreshold := req.AutoHandleSymbolThreshold
 	if symbolThreshold <= 0 {
-		symbolThreshold = DefaultAutoHandleSymbolThreshold
+		symbolThreshold = workspace.DefaultAutoHandleSymbolThreshold
 	}
 	if result.FilesIndexed >= fileThreshold || len(result.CompactSymbols) >= symbolThreshold {
 		if mode != "handles" {
@@ -26,11 +31,11 @@ func effectiveResponseMode(req IndexRequest, result Result) (string, bool) {
 	return mode, false
 }
 
-func autoResponseModeEnabled(req IndexRequest) bool {
+func autoResponseModeEnabled(req model.IndexRequest) bool {
 	return req.AutoResponseMode == nil || *req.AutoResponseMode
 }
 
-func applyBudgetFallback(result Result, base Result, req IndexRequest, mode string, packageFirst bool) Result {
+func applyBudgetFallback(result model.Result, base model.Result, req model.IndexRequest, mode string, packageFirst bool) model.Result {
 	if estimateResultTokens(result) <= req.MaxTokensApprox {
 		return result
 	}
@@ -84,7 +89,7 @@ func applyBudgetFallback(result Result, base Result, req IndexRequest, mode stri
 	return result
 }
 
-func applyResponseMode(base Result, mode string, packageFirst bool) Result {
+func applyResponseMode(base model.Result, mode string, packageFirst bool) model.Result {
 	result := cloneResult(base)
 	switch mode {
 	case "handles":
@@ -107,7 +112,7 @@ func applyResponseMode(base Result, mode string, packageFirst bool) Result {
 	return result
 }
 
-func applyModeOmissions(budget *ResultBudget, mode string, packageFirst bool) {
+func applyModeOmissions(budget *model.ResultBudget, mode string, packageFirst bool) {
 	switch mode {
 	case "handles":
 		budget.OmittedFields = uniqueStrings(append(budget.OmittedFields, "inlineFileSummaries", "compactSymbols", "relationships"))
@@ -119,40 +124,40 @@ func applyModeOmissions(budget *ResultBudget, mode string, packageFirst bool) {
 	}
 }
 
-func cloneResult(base Result) Result {
+func cloneResult(base model.Result) model.Result {
 	result := base
-	result.FileSummaries = append([]FileSummary(nil), base.FileSummaries...)
-	result.Packages = append([]PackageSummary(nil), base.Packages...)
-	result.CompactDeps = append([]CompactDependency(nil), base.CompactDeps...)
-	result.CompactSymbols = append([]CompactSymbol(nil), base.CompactSymbols...)
-	result.CompactFiles = make([]CompactFileSummary, len(base.CompactFiles))
+	result.FileSummaries = append([]model.FileSummary(nil), base.FileSummaries...)
+	result.Packages = append([]model.PackageSummary(nil), base.Packages...)
+	result.CompactDeps = append([]model.CompactDependency(nil), base.CompactDeps...)
+	result.CompactSymbols = append([]model.CompactSymbol(nil), base.CompactSymbols...)
+	result.CompactFiles = make([]model.CompactFileSummary, len(base.CompactFiles))
 	for i, file := range base.CompactFiles {
 		copyFile := file
 		copyFile.SymbolRefs = append([]int(nil), file.SymbolRefs...)
 		result.CompactFiles[i] = copyFile
 	}
-	result.Relationships = append([]Relationship(nil), base.Relationships...)
+	result.Relationships = append([]model.Relationship(nil), base.Relationships...)
 	result.Warnings = append([]string(nil), base.Warnings...)
-	result.WarningNotices = append([]WarningNotice(nil), base.WarningNotices...)
+	result.WarningNotices = append([]model.WarningNotice(nil), base.WarningNotices...)
 	result.FullWarnings = append([]string(nil), base.FullWarnings...)
 	if base.Debug != nil {
 		debug := *base.Debug
 		debug.CommandLine = append([]string(nil), base.Debug.CommandLine...)
 		result.Debug = &debug
 	}
-	result.StringTables = StringTables{
-		Paths:       append([]StringTableEntry(nil), base.StringTables.Paths...),
-		Languages:   append([]StringTableEntry(nil), base.StringTables.Languages...),
-		Packages:    append([]StringTableEntry(nil), base.StringTables.Packages...),
-		SymbolNames: append([]StringTableEntry(nil), base.StringTables.SymbolNames...),
-		SymbolKinds: append([]StringTableEntry(nil), base.StringTables.SymbolKinds...),
-		Misc:        append([]StringTableEntry(nil), base.StringTables.Misc...),
+	result.StringTables = model.StringTables{
+		Paths:       append([]model.StringTableEntry(nil), base.StringTables.Paths...),
+		Languages:   append([]model.StringTableEntry(nil), base.StringTables.Languages...),
+		Packages:    append([]model.StringTableEntry(nil), base.StringTables.Packages...),
+		SymbolNames: append([]model.StringTableEntry(nil), base.StringTables.SymbolNames...),
+		SymbolKinds: append([]model.StringTableEntry(nil), base.StringTables.SymbolKinds...),
+		Misc:        append([]model.StringTableEntry(nil), base.StringTables.Misc...),
 	}
 	return result
 }
 
-func dropSymbolRelationships(relationships []Relationship) []Relationship {
-	filtered := make([]Relationship, 0, len(relationships))
+func dropSymbolRelationships(relationships []model.Relationship) []model.Relationship {
+	filtered := make([]model.Relationship, 0, len(relationships))
 	for _, relationship := range relationships {
 		if strings.HasPrefix(relationship.To, "symbol:") {
 			continue

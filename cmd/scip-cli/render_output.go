@@ -157,10 +157,29 @@ func writeMarkdownShowFile(stdout io.Writer, output showFileOutput) error {
 func writeTextShowFile(stdout io.Writer, output showFileOutput) error {
 	return withRenderWriter(stdout, func(writer renderWriter) {
 		writer.Fprintf("Path: %s\nPackage: %s\n", output.Match.File.Path, output.Match.Package)
+		if output.Range != nil {
+			writeTextShowFileRange(writer, *output.Range)
+			return
+		}
 		for _, symbol := range output.Match.File.Symbols {
 			writer.Fprintf("- %s [%s] %d-%d\n", symbol.Name, symbol.Kind, symbol.StartLine, symbol.EndLine)
 		}
 	})
+}
+
+// writeTextShowFileRange keeps the range-specific output grouped so the
+// long-standing whole-file text format stays unchanged when `--range` is absent.
+func writeTextShowFileRange(writer renderWriter, view showFileRangeView) {
+	writer.Fprintf("Requested range: %d-%d\n", view.RequestedStart, view.RequestedEnd)
+	writer.Fprintf("Returned range: %d-%d\n", view.StartLine, view.EndLine)
+	writer.Fprintln("Source:")
+	for _, line := range view.Lines {
+		writer.Fprintf("%d: %s\n", line.Number, line.Text)
+	}
+	writer.Fprintln("Symbols:")
+	for _, symbol := range view.Symbols {
+		writer.Fprintf("- %s [%s] %d-%d\n", symbol.Name, symbol.Kind, symbol.StartLine, symbol.EndLine)
+	}
 }
 
 func writeMarkdownShowPackage(stdout io.Writer, output showPackageOutput) error {
@@ -301,7 +320,7 @@ func buildSearchWarningsMarkdownDocument(output searchWarningsOutput) markdownDo
 }
 
 func buildShowFileMarkdownDocument(output showFileOutput) markdownDocument {
-	return markdownDocument{
+	document := markdownDocument{
 		Title: "File Detail",
 		Sections: []markdownSection{
 			{
@@ -314,6 +333,30 @@ func buildShowFileMarkdownDocument(output showFileOutput) markdownDocument {
 				Heading: "Files",
 				Items:   markdownFileSummaryItems([]indexer.FileSummary{output.Match.File}),
 			},
+		},
+	}
+	if output.Range != nil {
+		document.Sections = append(document.Sections, buildShowFileRangeMarkdownSections(*output.Range)...)
+	}
+	return document
+}
+
+func buildShowFileRangeMarkdownSections(view showFileRangeView) []markdownSection {
+	return []markdownSection{
+		{
+			Heading: "Range",
+			Items: []markdownListItem{
+				{Text: "Requested lines: " + markdownCode(fmt.Sprintf("%d-%d", view.RequestedStart, view.RequestedEnd))},
+				{Text: "Returned lines: " + markdownCode(fmt.Sprintf("%d-%d", view.StartLine, view.EndLine))},
+			},
+		},
+		{
+			Heading: "Source",
+			Items:   markdownShowFileLineItems(view.Lines),
+		},
+		{
+			Heading: "Symbols",
+			Items:   markdownShowFileSymbolItems(view.Symbols),
 		},
 	}
 }
@@ -411,6 +454,35 @@ func markdownFileMatchItems(files []indexer.FileMatch) []markdownListItem {
 			item.Children = append(item.Children, "Symbols: "+joinMarkdownCodes(names))
 		}
 		items = append(items, item)
+	}
+	return items
+}
+
+func markdownShowFileLineItems(lines []showFileLine) []markdownListItem {
+	items := make([]markdownListItem, 0, len(lines))
+	for _, line := range lines {
+		// Keep the source snippet as individual list items so line numbers stay
+		// explicit. The source text itself is escaped plain Markdown instead of an
+		// inline code span because gomarkdown re-renders code spans with single
+		// backticks, which breaks snippets that contain template literals.
+		items = append(items, markdownListItem{
+			Text: fmt.Sprintf("%s %s", markdownCode(fmt.Sprintf("%d:", line.Number)), markdownText(line.Text)),
+		})
+	}
+	return items
+}
+
+func markdownShowFileSymbolItems(symbols []indexer.Symbol) []markdownListItem {
+	items := make([]markdownListItem, 0, len(symbols))
+	for _, symbol := range symbols {
+		items = append(items, markdownListItem{
+			Text: fmt.Sprintf(
+				"Name: %s, kind: %s, lines: %s",
+				markdownCode(symbol.Name),
+				markdownCode(symbol.Kind),
+				markdownCode(fmt.Sprintf("%d-%d", symbol.StartLine, symbol.EndLine)),
+			),
+		})
 	}
 	return items
 }

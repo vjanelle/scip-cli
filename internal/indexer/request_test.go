@@ -43,6 +43,14 @@ var _ = Describe("NormalizeRequest", func() {
 		Expect(normalizeLanguage("golang")).To(Equal("go"))
 	})
 
+	It("normalizes backend aliases and repeated args", func() {
+		Expect(normalizeIndexer("auto")).To(BeEmpty())
+		Expect(normalizeIndexer("scip-go")).To(Equal("go"))
+		Expect(normalizeIndexer("symbolic-fallback")).To(Equal("tree-sitter"))
+		Expect(normalizeIndexer("lsp")).To(Equal("scip-lsp"))
+		Expect(cleanedArgs([]string{" one ", "", "two"})).To(Equal([]string{"one", "two"}))
+	})
+
 	It("normalizes response mode values", func() {
 		tempRoot := GinkgoT().TempDir()
 
@@ -132,6 +140,26 @@ var _ = Describe("CollectFiles", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(files).To(Equal([]string{"app.py"}))
 		Expect(warnings).NotTo(BeEmpty())
+	})
+
+	It("exposes the directory and file filter wrappers", func() {
+		tempRoot := GinkgoT().TempDir()
+		hiddenDirReq := IndexRequest{IncludeHidden: false}
+		Expect(shouldSkipDir(hiddenDirReq, ".git")).To(BeTrue())
+		Expect(shouldSkipDir(hiddenDirReq, "pkg")).To(BeFalse())
+
+		hiddenPath := filepath.Join(tempRoot, ".hidden.py")
+		Expect(os.WriteFile(hiddenPath, []byte("print('hidden')"), 0o644)).To(Succeed())
+		hiddenInfo, err := os.Stat(hiddenPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(includePath(IndexRequest{MaxFileBytes: 1024}, ".hidden.py", hiddenInfo)).To(BeFalse())
+
+		goPath := filepath.Join(tempRoot, "main.go")
+		Expect(os.WriteFile(goPath, []byte("package main"), 0o644)).To(Succeed())
+		goInfo, err := os.Stat(goPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(includePath(IndexRequest{Language: "go", MaxFileBytes: 1024}, "main.go", goInfo)).To(BeTrue())
+		Expect(includePath(IndexRequest{Language: "python", MaxFileBytes: 1024}, "main.go", goInfo)).To(BeFalse())
 	})
 })
 
