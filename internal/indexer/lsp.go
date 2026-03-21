@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/sourcegraph/scip/bindings/go/scip"
+	"github.com/vjanelle/scip-cli/internal/indexer/sciputil"
+	securityhelpers "github.com/vjanelle/scip-cli/internal/indexer/security"
 )
 
 type lspIndexCommand struct{}
@@ -126,7 +128,7 @@ func (l *LSPIndexer) Index(ctx context.Context, req IndexRequest) (Result, error
 			filesSkipped++
 			continue
 		}
-		if warning := InvisibleUnicodeWarning(rel, content); warning != "" {
+		if warning := securityhelpers.InvisibleUnicodeWarning(rel, content); warning != "" {
 			warnings = append(warnings, warning)
 			filesSkipped++
 			summaries = append(summaries, FileSummary{
@@ -158,7 +160,7 @@ func (l *LSPIndexer) Index(ctx context.Context, req IndexRequest) (Result, error
 			Language:     file.language,
 			Bytes:        int64(len(file.content)),
 			Symbols:      symbols,
-			SymbolicSExp: buildSExpression(file.path, symbols),
+			SymbolicSExp: sciputil.BuildSExpression(file.path, symbols),
 		})
 		symbolRefsByFile[file.path] = refs
 		documents[file.path] = &scip.Document{
@@ -179,15 +181,15 @@ func (l *LSPIndexer) Index(ctx context.Context, req IndexRequest) (Result, error
 		doc := documents[summary.Path]
 		refs := symbolRefsByFile[summary.Path]
 		for index, symbol := range summary.Symbols {
-			symbolID := formatSymbol(summary.Language, symbol, index)
+			symbolID := sciputil.FormatSymbol(summary.Language, symbol, index)
 			doc.Symbols = append(doc.Symbols, &scip.SymbolInformation{
 				Symbol:      symbolID,
 				DisplayName: symbol.Name,
-				Kind:        symbolKind(symbol.Kind),
+				Kind:        sciputil.SymbolKind(symbol.Kind),
 			})
 			// Seed each symbol with its definition before layering on reference
 			// occurrences returned by the language server.
-			addOccurrence(occurrences[summary.Path], doc, scip.Occurrence{
+			addOccurrence(occurrences[summary.Path], doc, &scip.Occurrence{
 				Range:       symbolRange(symbol),
 				Symbol:      symbolID,
 				SymbolRoles: int32(scip.SymbolRole_Definition),
@@ -220,7 +222,7 @@ func (l *LSPIndexer) Index(ctx context.Context, req IndexRequest) (Result, error
 				if rel == summary.Path && sameRange(location.Range, refs[index].Range) {
 					roles = int32(scip.SymbolRole_Definition)
 				}
-				addOccurrence(occurrences[rel], targetDoc, scip.Occurrence{
+				addOccurrence(occurrences[rel], targetDoc, &scip.Occurrence{
 					Range:       location.Range.toSCIP(),
 					Symbol:      symbolID,
 					SymbolRoles: roles,
@@ -235,14 +237,14 @@ func (l *LSPIndexer) Index(ctx context.Context, req IndexRequest) (Result, error
 			orderedDocs = append(orderedDocs, doc)
 		}
 	}
-	if err := writeSCIPSnapshot(outputPath, req.Root, "scip-cli-lsp", orderedDocs); err != nil {
+	if err := sciputil.WriteSCIPSnapshot(outputPath, req.Root, "scip-cli-lsp", orderedDocs); err != nil {
 		return Result{}, fmt.Errorf("write scip index: %w", err)
 	}
 
 	return Result{
 		Indexer:       "scip-lsp",
 		Root:          req.Root,
-		Language:      firstNonEmpty(req.Language, "mixed"),
+		Language:      sciputil.FirstNonEmpty(req.Language, "mixed"),
 		FilesScanned:  len(files),
 		FilesIndexed:  len(orderedDocs),
 		FilesSkipped:  filesSkipped,

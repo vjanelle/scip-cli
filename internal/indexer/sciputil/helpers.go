@@ -1,4 +1,4 @@
-package indexer
+package sciputil
 
 import (
 	"fmt"
@@ -8,12 +8,16 @@ import (
 	"strings"
 
 	"github.com/sourcegraph/scip/bindings/go/scip"
+	"github.com/vjanelle/scip-cli/internal/indexer/model"
 	"google.golang.org/protobuf/proto"
 )
 
-var simpleSymbolPattern = regexp.MustCompile(`(?m)^\s*(?:(?:pub)\s+)?(?:func|function|type|class|interface|struct|enum|def|fn)\s+([A-Za-z_][A-Za-z0-9_]*)`)
+// SimpleSymbolPattern powers the lightweight fallback symbol extraction path.
+var SimpleSymbolPattern = regexp.MustCompile(`(?m)^\s*(?:(?:pub)\s+)?(?:func|function|type|class|interface|struct|enum|def|fn)\s+([A-Za-z_][A-Za-z0-9_]*)`)
 
-func buildSExpression(path string, symbols []Symbol) string {
+// BuildSExpression renders a compact symbolic form that is cheap to include in
+// inline responses when we do not want to send full source text.
+func BuildSExpression(path string, symbols []model.Symbol) string {
 	parts := make([]string, 0, len(symbols)+1)
 	parts = append(parts, fmt.Sprintf("(file %q", filepath.ToSlash(path)))
 	for _, symbol := range symbols {
@@ -22,7 +26,8 @@ func buildSExpression(path string, symbols []Symbol) string {
 	return strings.Join(parts, "") + ")"
 }
 
-func formatSymbol(language string, symbol Symbol, index int) string {
+// FormatSymbol builds a stable local SCIP symbol ID for an extracted symbol.
+func FormatSymbol(language string, symbol model.Symbol, index int) string {
 	descriptor := scip.Symbol{
 		Scheme: "scip-cli",
 		Package: &scip.Package{
@@ -49,7 +54,8 @@ func descriptorSuffix(kind string) scip.Descriptor_Suffix {
 	}
 }
 
-func symbolKind(kind string) scip.SymbolInformation_Kind {
+// SymbolKind maps the CLI's compact symbol categories onto SCIP kinds.
+func SymbolKind(kind string) scip.SymbolInformation_Kind {
 	switch kind {
 	case "function":
 		return scip.SymbolInformation_Function
@@ -64,7 +70,8 @@ func symbolKind(kind string) scip.SymbolInformation_Kind {
 	}
 }
 
-func firstNonEmpty(values ...string) string {
+// FirstNonEmpty returns the first trimmed, non-empty value from a preference list.
+func FirstNonEmpty(values ...string) string {
 	for _, value := range values {
 		if strings.TrimSpace(value) != "" {
 			return value
@@ -73,7 +80,8 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func writeSCIPSnapshot(path, root, toolName string, docs []*scip.Document) error {
+// WriteSCIPSnapshot serializes documents to a workspace-local .scip snapshot.
+func WriteSCIPSnapshot(path, root, toolName string, docs []*scip.Document) error {
 	index := &scip.Index{
 		Metadata: &scip.Metadata{
 			Version: scip.ProtocolVersion_UnspecifiedProtocolVersion,

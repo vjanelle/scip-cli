@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	securityhelpers "github.com/vjanelle/scip-cli/internal/indexer/security"
 )
 
 type GoIndexer struct {
@@ -134,7 +136,7 @@ func collectGoSummaries(req IndexRequest) ([]FileSummary, []string) {
 			warnings = append(warnings, "failed to inspect "+filepath.ToSlash(rel)+": "+err.Error())
 			continue
 		}
-		if warning := InvisibleUnicodeWarning(rel, content); warning != "" {
+		if warning := securityhelpers.InvisibleUnicodeWarning(rel, content); warning != "" {
 			warnings = append(warnings, warning)
 		}
 		summaries = append(summaries, FileSummary{

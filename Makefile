@@ -15,6 +15,7 @@ endif
 BINARY := scip-cli$(EXEEXT)
 CMD_DIR := ./cmd/scip-cli
 LOCAL_BIN ?= $(subst \,/,$(HOME_DIR))/.local/bin
+COVERAGE_MIN ?= 80
 LSP_NAME ?= zls
 LSP_REPO ?= https://github.com/zigtools/zls.git
 LSP_BUILD_DIR ?= $(ROOT)/.tmp/$(LSP_NAME)
@@ -61,8 +62,9 @@ test:
 	$(GO) tool ginkgo -r -p --race --randomize-all --randomize-suites --fail-on-pending --keep-going
 
 coverage:
-	$(GO) test ./internal/... -covermode=atomic -coverprofile=.coverage.out
+	$(GO) tool ginkgo -r --cover --coverprofile=.coverage.out --randomize-all --randomize-suites --fail-on-pending --keep-going
 	$(GO) tool cover -func=.coverage.out
+	$(GO) run ./scripts/check_coverage --profile .coverage.out --min $(COVERAGE_MIN)
 
 build:
 	$(GO) build -buildvcs=false -o "$(BINARY)" $(CMD_DIR)

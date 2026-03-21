@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/vjanelle/scip-cli/internal/indexer/sciputil"
+	securityhelpers "github.com/vjanelle/scip-cli/internal/indexer/security"
 )
 
 type TreeSitterIndexer struct{}
@@ -76,7 +79,7 @@ func (t *TreeSitterIndexer) Index(_ context.Context, req IndexRequest) (Result, 
 	return Result{
 		Indexer:       "symbolic-fallback",
 		Root:          req.Root,
-		Language:      firstNonEmpty(req.Language, "mixed"),
+		Language:      sciputil.FirstNonEmpty(req.Language, "mixed"),
 		FilesScanned:  len(files),
 		FilesIndexed:  len(summaries),
 		FilesSkipped:  skippedCount,
@@ -92,7 +95,7 @@ func (t *TreeSitterIndexer) summarizeFile(root, rel string) (FileSummary, error)
 	if err != nil {
 		return FileSummary{}, err
 	}
-	if warning := InvisibleUnicodeWarning(rel, content); warning != "" {
+	if warning := securityhelpers.InvisibleUnicodeWarning(rel, content); warning != "" {
 		return FileSummary{
 			Path:       rel,
 			Language:   DetectLanguage(rel),
@@ -102,7 +105,7 @@ func (t *TreeSitterIndexer) summarizeFile(root, rel string) (FileSummary, error)
 		}, nil
 	}
 
-	matches := simpleSymbolPattern.FindAllStringSubmatchIndex(string(content), -1)
+	matches := sciputil.SimpleSymbolPattern.FindAllStringSubmatchIndex(string(content), -1)
 	symbols := make([]Symbol, 0, len(matches))
 	for _, match := range matches {
 		name := string(content[match[2]:match[3]])
@@ -121,6 +124,6 @@ func (t *TreeSitterIndexer) summarizeFile(root, rel string) (FileSummary, error)
 		Language:     DetectLanguage(rel),
 		Bytes:        int64(len(content)),
 		Symbols:      symbols,
-		SymbolicSExp: buildSExpression(rel, symbols),
+		SymbolicSExp: sciputil.BuildSExpression(rel, symbols),
 	}, nil
 }

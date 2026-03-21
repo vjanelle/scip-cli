@@ -16,6 +16,9 @@ import (
 	tspython "github.com/tree-sitter/tree-sitter-python/bindings/go"
 	tsrust "github.com/tree-sitter/tree-sitter-rust/bindings/go"
 	tstypescript "github.com/tree-sitter/tree-sitter-typescript/bindings/go"
+
+	"github.com/vjanelle/scip-cli/internal/indexer/sciputil"
+	securityhelpers "github.com/vjanelle/scip-cli/internal/indexer/security"
 )
 
 type TreeSitterIndexer struct{}
@@ -88,7 +91,7 @@ func (t *TreeSitterIndexer) Index(ctx context.Context, req IndexRequest) (Result
 		outputPath = filepath.Join(req.Root, "index.scip")
 	}
 	if req.EmitSCIP {
-		if err := writeSCIPSnapshot(outputPath, req.Root, "scip-cli-tree-sitter", documents); err != nil {
+		if err := sciputil.WriteSCIPSnapshot(outputPath, req.Root, "scip-cli-tree-sitter", documents); err != nil {
 			return Result{}, err
 		}
 	}
@@ -118,7 +121,7 @@ func (t *TreeSitterIndexer) summarizeFile(ctx context.Context, root, rel string,
 	if err != nil {
 		return FileSummary{}, nil, err
 	}
-	if warning := InvisibleUnicodeWarning(rel, content); warning != "" {
+	if warning := securityhelpers.InvisibleUnicodeWarning(rel, content); warning != "" {
 		return FileSummary{
 			Path:       rel,
 			Language:   DetectLanguage(rel),
@@ -137,7 +140,7 @@ func (t *TreeSitterIndexer) summarizeFile(ctx context.Context, root, rel string,
 			Language:     language,
 			Bytes:        int64(len(content)),
 			Symbols:      symbols,
-			SymbolicSExp: buildSExpression(rel, symbols),
+			SymbolicSExp: sciputil.BuildSExpression(rel, symbols),
 		}, buildDocument(rel, language, content, symbols, symbolicOnly), nil
 	}
 
@@ -182,7 +185,7 @@ func (t *TreeSitterIndexer) summarizeFile(ctx context.Context, root, rel string,
 }
 
 func fallbackSymbols(path string, content []byte) []Symbol {
-	matches := simpleSymbolPattern.FindAllStringSubmatchIndex(string(content), -1)
+	matches := sciputil.SimpleSymbolPattern.FindAllStringSubmatchIndex(string(content), -1)
 	symbols := make([]Symbol, 0, len(matches))
 	for _, match := range matches {
 		name := string(content[match[2]:match[3]])
@@ -324,11 +327,11 @@ func buildDocument(path, language string, content []byte, symbols []Symbol, symb
 	}
 
 	for index, symbol := range symbols {
-		symbolID := formatSymbol(language, symbol, index)
+		symbolID := sciputil.FormatSymbol(language, symbol, index)
 		doc.Symbols = append(doc.Symbols, &scip.SymbolInformation{
 			Symbol:      symbolID,
 			DisplayName: symbol.Name,
-			Kind:        symbolKind(symbol.Kind),
+			Kind:        sciputil.SymbolKind(symbol.Kind),
 		})
 		doc.Occurrences = append(doc.Occurrences, &scip.Occurrence{
 			Range:       []int32{int32(symbol.StartLine - 1), 0, int32(symbol.EndLine), 0},

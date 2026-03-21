@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"bufio"
 	"encoding/json"
 	"strings"
 )
@@ -27,7 +28,7 @@ func decodeDocumentSymbols(path, source string, payload json.RawMessage) ([]Symb
 		return nil, nil, err
 	}
 
-	lines := strings.Split(source, "\n")
+	lines := splitSourceLines(source)
 	symbols := make([]Symbol, 0, len(rawItems))
 	refs := make([]lspSymbolRef, 0, len(rawItems))
 	for _, rawItem := range rawItems {
@@ -101,7 +102,7 @@ func symbolSignature(detail string, lines []string, line int) string {
 	if line < 0 || line >= len(lines) {
 		return ""
 	}
-	return strings.TrimSpace(strings.TrimRight(lines[line], "\r"))
+	return strings.TrimSpace(lines[line])
 }
 
 func symbolBody(lines []string, symbolRange lspRange) string {
@@ -121,9 +122,29 @@ func symbolBody(lines []string, symbolRange lspRange) string {
 	}
 	block := make([]string, 0, end-start+1)
 	for line := start; line <= end; line++ {
-		block = append(block, strings.TrimRight(lines[line], "\r"))
+		block = append(block, lines[line])
 	}
 	return strings.TrimSpace(strings.Join(block, "\n"))
+}
+
+func splitSourceLines(source string) []string {
+	scanner := bufio.NewScanner(strings.NewReader(source))
+	// LSP symbol extraction already has the full document text in memory, so we
+	// can raise the scanner limit to the document size and let ScanLines
+	// normalize LF and CRLF terminators consistently.
+	scanner.Buffer(make([]byte, 0, min(len(source), 64*1024)), max(len(source), 64*1024))
+
+	lines := make([]string, 0)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		// Scanning an in-memory string should not fail in practice, so keep the
+		// original payload as a single line rather than returning partial text.
+		return []string{source}
+	}
+
+	return lines
 }
 
 func normalizeLSPKind(kind int) string {
