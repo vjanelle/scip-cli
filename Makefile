@@ -47,7 +47,7 @@ bootstrap:
 	$(GO) mod tidy
 
 install-scip-go:
-	GOPATH="$(USER_GOPATH)" $(GO) install github.com/sourcegraph/scip-go/cmd/scip-go@latest
+	GOPATH="$(USER_GOPATH)" $(GO) install github.com/scip-code/scip-go/cmd/scip-go@latest
 
 fix:
 	$(GO) fix ./...
