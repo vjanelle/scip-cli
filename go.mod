@@ -11,7 +11,7 @@ tool (
 )
 
 require (
-	github.com/choria-io/fisk v0.8.0
+	github.com/choria-io/fisk v0.8.1
 	github.com/gomarkdown/markdown v0.0.0-20260217112301-37c66b85d6ab
 	github.com/onsi/ginkgo/v2 v2.29.0
 	github.com/onsi/gomega v1.41.0

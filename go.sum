@@ -6,8 +6,8 @@ github.com/alecthomas/kong v1.14.0 h1:gFgEUZWu2ZmZ+UhyZ1bDhuutbKN1nTtJTwh19Wsn21
 github.com/alecthomas/kong v1.14.0/go.mod h1:wrlbXem1CWqUV5Vbmss5ISYhsVPkBb1Yo7YKJghju2I=
 github.com/alecthomas/repr v0.5.2 h1:SU73FTI9D1P5UNtvseffFSGmdNci/O6RsqzeXJtP0Qs=
 github.com/alecthomas/repr v0.5.2/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
-github.com/choria-io/fisk v0.8.0 h1:5Et8H6tcDMRBWByrUuWF9lYmnzX8KvfPAgmnS9VOHvo=
-github.com/choria-io/fisk v0.8.0/go.mod h1:s4e6TqrkLX8k9IQY8t7OO7GnxEinroOSrE7ZN9ClAfA=
+github.com/choria-io/fisk v0.8.1 h1:H7GZSNjL9Oo1U0ZDxgo26fD6/KZ1F6L/PtnxtPZpdjU=
+github.com/choria-io/fisk v0.8.1/go.mod h1:4JnzUmKLPl1ZC2fd5KrF35Rt4neOJ6ObYHfq7+XHt1Y=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
